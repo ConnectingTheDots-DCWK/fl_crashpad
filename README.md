@@ -90,6 +90,14 @@ Sandbox, `handlerMissing` for a broken install — never a message to parse.
   through Flutter's own build: a build hook for the library, and on desktop
   small package-owned platform files for the handler executable.
 
+## Used in production
+
+fl_crashpad catches native crashes in [Ripple Effect](https://ripplefx.app), a
+desktop application for writing interactive stories as graphs, built with
+Flutter and Rust for Linux, macOS and Windows — the crashes the Dart VM never
+sees, in its Rust engine and in the native libraries it loads. The app captures
+them when it restarts.
+
 ## Annotations that change
 
 ```dart
