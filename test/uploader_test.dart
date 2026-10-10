@@ -186,6 +186,37 @@ void main() {
     expect(kept['uploadAttempts'], 1);
     expect(kept['uploaded'], isFalse);
   }, timeout: const Timeout(Duration(minutes: 2)));
+  test(
+    'a report the handler is uploading keeps its marker',
+    () async {
+      final id = await crash();
+      processReports(temp.path, ReportSanitizer.forHost(), decide: true);
+      final marker = File('${temp.path}/fl_crashpad/reports/$id.json');
+      final decided = marker.readAsStringSync();
+      expect(decided, contains('"decision":"held"'));
+
+      // What a handler holds while it sends a report: the generic database's
+      // lock file, which makes Crashpad's listing skip the report.
+      final dump = File(
+        listNativeReports(temp.path).singleWhere((r) => r['id'] == id)['path']!
+            as String,
+      );
+      final lock = File('${dump.path.substring(0, dump.path.length - 4)}.lock')
+        ..writeAsStringSync('');
+      expect(listNativeReports(temp.path), isEmpty);
+
+      await CrashReportDatabase(temp).reports();
+      lock.deleteSync();
+      expect(
+        marker.existsSync() ? marker.readAsStringSync() : null,
+        decided,
+        reason: 'forgotten, it is sanitised again and its decision lost',
+      );
+    },
+    testOn: 'linux',
+    timeout: const Timeout(Duration(minutes: 2)),
+  );
+
   test('a report the app sent its own way is recorded once, with its '
       'attachments handed over clean', () async {
     final id = await crash();

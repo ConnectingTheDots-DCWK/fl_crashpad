@@ -3,6 +3,13 @@
 What an app can do with each version, newest first. The reasoning behind a
 change lives beside the code in `CLAUDE.md`; this file only says what changed.
 
+## Unreleased
+
+- **Listing reports while one was being uploaded** no longer makes the
+  package forget it had sanitised that report: on Linux and Android,
+  `CrashReportDatabase.reports()` during a handler's upload had it cleaned a
+  second time and asked for again on the next start.
+
 ## 1.0.1
 
 - **1.0.0 could not be built.** Its archive on pub.dev was missing

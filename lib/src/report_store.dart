@@ -227,20 +227,50 @@ void forgetReport(String database, String id) {
 }
 
 /// Markers of reports Crashpad has since pruned.
-void _forgetVanished(String database, Set<String> present) {
+///
+/// Gone means its minidump is gone, not that Crashpad's listing left it out:
+/// the generic database (Linux, Android) skips a report whose lock it cannot
+/// take, and a handler holds that lock for as long as it is uploading the
+/// report. A marker forgotten then made the next pass sanitise the report
+/// again while the handler was reading it, and lost its decision, so the next
+/// start asked for it again.
+void _forgetVanished(String database, Set<String> listed) {
   final directory = Directory('$database/fl_crashpad/reports');
   if (!directory.existsSync()) return;
+  Set<String>? onDisk;
   for (final file in directory.listSync().whereType<File>()) {
     final name = file.uri.pathSegments.last;
     if (!name.endsWith('.json')) continue;
-    if (!present.contains(name.substring(0, name.length - 5))) {
-      try {
-        file.deleteSync();
-      } on FileSystemException {
-        // Somebody else got there first.
-      }
+    final id = name.substring(0, name.length - 5);
+    if (listed.contains(id)) continue;
+    onDisk ??= _minidumpsOnDisk(database);
+    if (onDisk.contains(id)) continue;
+    try {
+      file.deleteSync();
+    } on FileSystemException {
+      // Somebody else got there first.
     }
   }
+}
+
+/// The id of every minidump in [database], whatever state it is in: Crashpad
+/// files a report in a folder per state (`new`, `pending`, `completed`), or on
+/// Windows keeps them all in `reports`.
+Set<String> _minidumpsOnDisk(String database) {
+  final ids = <String>{};
+  for (final state in const ['new', 'pending', 'completed', 'reports']) {
+    try {
+      for (final file in Directory(
+        '$database/$state',
+      ).listSync().whereType<File>()) {
+        final name = file.uri.pathSegments.last;
+        if (name.endsWith('.dmp')) ids.add(name.substring(0, name.length - 4));
+      }
+    } on FileSystemException {
+      // No folder for that state in this database.
+    }
+  }
+  return ids;
 }
 
 List<Map<String, Object?>> listNativeReports(String database) {

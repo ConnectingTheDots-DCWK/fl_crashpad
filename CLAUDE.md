@@ -442,6 +442,13 @@ string reads as an IP.
   back without its relocations, and the *runner* segfaults, calling
   `0xe3c6`-style addresses. The crasher is its own package (`test/crasher/`),
   built once with `dart build cli` into a bundle with its own copy.
+- **A report being uploaded is missing from Crashpad's listing.** The
+  generic database (Linux, Android) skips a report whose `<id>.lock` it cannot
+  take, and a handler holds it for the whole upload. `_forgetVanished` once
+  took the listing for the truth and deleted the marker, so the next
+  `reports()` sanitised the report again under the handler and lost its
+  decision. A marker is forgotten only when the `.dmp` is gone from disk;
+  `uploader_test` fakes the lock and was proved red without it.
 - **archive 4's `extractArchiveToDisk` is async.** Un-awaited, it unpacked one
   file and reported success. `unawaited_futures` is on for that reason.
 - **Don't depend on `meta` above Flutter's pin** (1.17.0): every Flutter
