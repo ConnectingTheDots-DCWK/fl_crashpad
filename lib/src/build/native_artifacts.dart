@@ -337,10 +337,20 @@ class ArtifactResolver {
           'Nothing was unpacked.',
         );
       }
-      await extractArchiveToDisk(
-        TarDecoder().decodeBytes(GZipDecoder().decodeBytes(bytes)),
-        staging.path,
+      final archive = TarDecoder().decodeBytes(
+        GZipDecoder().decodeBytes(bytes),
       );
+      await extractArchiveToDisk(archive, staging.path);
+      // Each file dated as the archive dates it, as tar unpacks. The build
+      // hook depends on the library, and one dated now — after the build that
+      // downloaded it began — reads as modified during that build, which the
+      // hooks runner answers by running the hook again and saying so.
+      for (final entry in archive) {
+        if (!entry.isFile) continue;
+        File('${staging.path}/${entry.name}').setLastModifiedSync(
+          DateTime.fromMillisecondsSinceEpoch(entry.lastModTime * 1000),
+        );
+      }
       final unpacked = ArtifactDirectory(staging, target);
       if (!unpacked.hasFiles) {
         throw ArtifactUnavailable('$url does not have the expected layout');

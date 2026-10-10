@@ -58,10 +58,6 @@ void main(List<String> args) async {
       ),
     );
 
-    // Rerun once the cache is filled: a missing file is a dependency too, and
-    // the build below may have found nothing there.
-    output.dependencies.add(resolver.cached(target).completeStamp.uri);
-
     final ArtifactDirectory artifacts;
     try {
       artifacts = await resolver.resolve(
@@ -69,6 +65,11 @@ void main(List<String> args) async {
         override: override == null ? null : Directory.fromUri(override),
       );
     } on ArtifactUnavailable catch (e) {
+      // Rerun once the cache is filled: a missing file is a dependency too.
+      // Only here — after a download the stamp is dated now, and depending on
+      // it made every first build run the hook twice ("File modified during
+      // build").
+      output.dependencies.add(resolver.cached(target).completeStamp.uri);
       // This package's own checkout, where the native half is what
       // `tool/build_native.dart` is about to make: failing here would stop
       // the very command the message below tells people to run. No asset,

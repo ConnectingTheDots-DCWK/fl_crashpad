@@ -66,6 +66,9 @@ void main() {
       expect(requested, [
         '/native-v9.9.9/fl_crashpad-native-9.9.9-linux-x64.tar.gz',
       ]);
+      // As tar unpacks: a hook that depends on the library would otherwise
+      // see it modified during the build that downloaded it, and run again.
+      expect(result.library.lastModifiedSync().toUtc(), _built);
       if (!Platform.isWindows) {
         final mode = result.handler!.statSync().mode;
         expect(mode & 0x49, 0x49, reason: 'executable by everybody');
@@ -187,6 +190,9 @@ void main() {
 }
 
 /// A small archive laid out as a release is, with made-up contents.
+/// When the archives were "built": long before any test runs.
+final _built = DateTime.utc(2026, 9, 29, 21, 39);
+
 List<int> _archive(NativeTarget target) {
   final archive = Archive()
     ..add(ArchiveFile.bytes('lib/${target.libraryFileName}', [1, 2, 3]))
@@ -195,5 +201,8 @@ List<int> _archive(NativeTarget target) {
         ..mode = 0x1ed, // 0755
     )
     ..add(ArchiveFile.string('bin/crashpad_handler.rev', 'r\n'));
+  for (final file in archive) {
+    file.lastModTime = _built.millisecondsSinceEpoch ~/ 1000;
+  }
   return GZipEncoder().encode(TarEncoder().encode(archive));
 }

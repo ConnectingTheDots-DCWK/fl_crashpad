@@ -464,6 +464,13 @@ string reads as an IP.
   `reports()` sanitised the report again under the handler and lost its
   decision. A marker is forgotten only when the `.dmp` is gone from disk;
   `uploader_test` fakes the lock and was proved red without it.
+- **A hook's dependency must not be dated by the build that runs it.** The
+  hooks runner reruns a hook — and prints "File modified during build. Build
+  must be rerun." — when a dependency is newer than the build's start. The
+  hook depended on the `.complete` stamp and the library, both written by the
+  download it had just done, so every first build ran it twice. Unpacked
+  files now keep the archive's dates, as tar's do (`artifacts_test`, proved
+  red), and the stamp is a dependency only when nothing was found.
 - **archive 4's `extractArchiveToDisk` is async.** Un-awaited, it unpacked one
   file and reported success. `unawaited_futures` is on for that reason.
 - **Don't depend on `meta` above Flutter's pin** (1.17.0): every Flutter

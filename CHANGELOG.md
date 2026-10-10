@@ -5,6 +5,11 @@ change lives beside the code in `CLAUDE.md`; this file only says what changed.
 
 ## Unreleased
 
+- **The first build no longer runs the build hook twice.** It printed "File
+  modified during build. Build must be rerun." after downloading the native
+  half, from `dart run fl_crashpad:prefetch` and the first `flutter build`
+  alike.
+
 - **`requestUpload` sends at once on desktop**, as it did on Android and
   iOS, when `start` was given an `uploadEndpoint`: the report has gone by the
   time the future completes, instead of on the handler's next pass up to
