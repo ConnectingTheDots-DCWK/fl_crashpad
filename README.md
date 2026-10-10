@@ -242,6 +242,12 @@ await database.requestUpload(reportId); // sanitised, then sent even with upload
 database.delete(reportId);
 ```
 
+When `start` was given an `uploadEndpoint`, `requestUpload` sends the report
+then and there, on every platform, and it has gone by the time the future
+completes — check `uploaded` to tell the user. Called before `start`, or
+without an endpoint, it leaves the report asked for and the next start that
+has one sends it.
+
 The database works before `start` and from any isolate, so an app can show
 "the last session ended in a crash — send the report?" on the next launch —
 and what it shows is the sanitised report, the same bytes that would be sent.

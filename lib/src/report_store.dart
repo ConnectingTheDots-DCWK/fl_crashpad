@@ -227,6 +227,13 @@ bool _worthRetrying(
 
 /// Sanitises one report if it is not already, then asks for its upload.
 void sanitizeAndRequest(String database, ReportSanitizer sanitizer, String id) {
+  markAsked(database, sanitizer, id);
+  requestNativeUpload(database, id);
+}
+
+/// Sanitises one report if it is not already, and records that the app asked
+/// for it by name.
+void markAsked(String database, ReportSanitizer sanitizer, String id) {
   final settings = StoreSettings.read(database);
   if (settings.sanitize) {
     var marker = _Marker.read(database, id);
@@ -249,7 +256,6 @@ void sanitizeAndRequest(String database, ReportSanitizer sanitizer, String id) {
       decision: 'asked',
     ).write(database, id);
   }
-  requestNativeUpload(database, id);
 }
 
 class CrashpadNotFound implements Exception {

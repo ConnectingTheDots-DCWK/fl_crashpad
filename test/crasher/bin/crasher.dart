@@ -14,8 +14,10 @@
 // reaches Crashpad only through WER and crashpad_wer.dll; `dump` writes a
 // report without a crash;
 // `wait` starts Crashpad and stays alive until killed, so that a handler
-// sending reports on start has a client to stay up for. With an upload URL,
-// the user has consented.
+// sending reports on start has a client to stay up for; `request` starts
+// Crashpad without the user's consent and asks for every report by name with
+// `requestUpload`, then exits. With an upload URL — and any kind but
+// `request` — the user has consented.
 import 'dart:ffi';
 import 'dart:io';
 
@@ -35,7 +37,7 @@ Future<void> main(List<String> args) async {
       uploadEndpoint: url == null
           ? null
           : CrashpadUploadEndpoint(url: url, rateLimit: false),
-      uploadConsent: url != null,
+      uploadConsent: url != null && kind != 'request',
       periodicTasks: url != null,
     ),
   );
@@ -50,6 +52,11 @@ Future<void> main(List<String> args) async {
         Void Function(Pointer<Void>, Pointer<Void>, Uint32),
         void Function(Pointer<Void>, Pointer<Void>, int)
       >('RaiseFailFastException')(nullptr, nullptr, 0);
+    case 'request':
+      final reports = CrashReportDatabase(Directory(database));
+      for (final report in await reports.reports()) {
+        await reports.requestUpload(report.id);
+      }
     case 'wait':
       await Crashpad.sanitizationIdle;
       await Future<void>.delayed(const Duration(minutes: 5));

@@ -1,5 +1,7 @@
 // The upload this package makes itself, on the platforms where Crashpad's
-// own cannot be trusted with it.
+// own cannot be trusted with it — and on desktop for one report the app asks
+// for by name, which a running handler would only find on its next pass,
+// fifteen minutes off (see uploadNow).
 //
 // **Why on Android and iOS the handler is never given a URL.** Crashpad's
 // Android handler has only its `socket` transport, and that speaks plain http:
@@ -32,13 +34,15 @@ import 'ffi/bindings.dart';
 import 'native_call.dart';
 import 'options.dart';
 import 'report_store.dart';
+import 'sanitizer.dart';
 
 /// Whether this package, rather than the handler, uploads reports here.
 bool get uploadsFromDart => Platform.isAndroid || Platform.isIOS;
 
 /// What the running process's [Crashpad.start] was told about uploads, so
 /// that [CrashReportDatabase.requestUpload] can send a report at once
-/// rather than on the next launch. Per isolate; null before start.
+/// rather than on the next launch or the handler's next pass. Per isolate;
+/// null before start.
 CrashpadUploadEndpoint? activeUpload;
 
 /// Crashpad's own timeout for one upload (kUploadReportTimeoutSeconds).
@@ -95,6 +99,50 @@ Future<void> uploadPending(
       // The report stays pending, for the next start to try.
     }
   }
+}
+
+/// Sends [id] now, from Dart, on desktop: a request made through Crashpad
+/// alone would wait for the running handler's next pass, fifteen minutes off.
+///
+/// The report is sent while it is still filed as completed, which the handler
+/// never picks up, and only then moved back to pending to have the outcome
+/// recorded — so no pass of the handler can take it mid-send and send it
+/// twice. A refusal is recorded as an attempt and left pending, for the
+/// handler's next pass and then the next start. A report already pending is
+/// the handler's already, and one already sent is refused as before: both go
+/// the way they always went.
+Future<void> uploadNow(
+  String database,
+  ReportSanitizer sanitizer,
+  CrashpadUploadEndpoint upload,
+  String id,
+) async {
+  markAsked(database, sanitizer, id);
+  final report = listNativeReports(
+    database,
+  ).firstWhere((r) => r['id'] == id, orElse: () => throw CrashpadNotFound(id));
+  if (report['state'] != 'completed' || report['uploaded'] == true) {
+    requestNativeUpload(database, id);
+    return;
+  }
+  String? response;
+  try {
+    response = await _post(
+      upload,
+      id: id,
+      minidump: File(report['path']! as String),
+      attachments: Directory('$database/attachments/$id'),
+    );
+  } on Object {
+    // Counted as a refusal: the report stays, for another try.
+  }
+  requestNativeUpload(database, id);
+  recordNativeUpload(
+    database,
+    id,
+    response == null ? uploadFailed : uploadSent,
+    response: response,
+  );
 }
 
 /// Records [id] as sent by the app itself, known remotely as [remoteId].

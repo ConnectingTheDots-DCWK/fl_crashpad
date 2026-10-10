@@ -211,7 +211,7 @@ abstract final class Crashpad {
       return (nativeStart(config, error), null);
     });
 
-    if (mobile) activeUpload = upload;
+    activeUpload = upload;
     if (backlog) {
       // The rest, off the caller's isolate. On desktop the handler is running
       // by now and sends these on its next pass, every fifteen minutes. On

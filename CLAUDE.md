@@ -410,8 +410,14 @@ carries the full argument):
   requested** (generic, macOS and Windows databases all do). An explicit
   upload bypasses both the setting and the rate limit.
 - **The new handler's first pass sends it**, because its upload thread starts
-  with an immediate pass. Anything requested later goes on the next 15-minute
-  pass.
+  with an immediate pass. Anything requested later through Crashpad alone
+  would wait for the next 15-minute pass, so `requestUpload` in a process
+  `start`ed with an endpoint sends the report from Dart (`uploadNow`, the
+  mobile uploader's `_post`). It sends while the report is still *completed*,
+  which the handler never touches, and only then `RequestUpload`s it to
+  record the outcome, so a handler pass cannot take it mid-send and send it
+  twice. A report already pending is the handler's and is left to it.
+  `crash_test`'s `requestUpload sends at once` was red without it.
 - **A refused upload is asked for again by the next start**, up to five
   attempts (`uploadAttemptLimit`, the shim's `kAttempts`). Crashpad's desktop
   handler gives up after one and files the report completed, unsent — it

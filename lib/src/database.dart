@@ -157,17 +157,21 @@ class CrashReportDatabase {
 
   /// Sanitises a report if it is not already, then asks for it to be sent
   /// whether or not uploads are enabled — for an app that asks the user about
-  /// each crash rather than once. On desktop a running handler picks it up on
-  /// its next pass (every fifteen minutes), and one that starts picks it up at
-  /// once. On Android and iOS it is sent now, if [Crashpad.start] was given a
-  /// [CrashpadOptions.upload] in this isolate, and otherwise on the next
-  /// start that has one.
+  /// each crash rather than once. If [Crashpad.start] was given a
+  /// [CrashpadOptions.uploadEndpoint] in this isolate it is sent now, and has
+  /// been by the time this completes; otherwise the next start that has one
+  /// sends it. One the server refuses is tried again later, as any is.
   Future<void> requestUpload(String reportId) async {
     final path = directory.path;
     final sanitizer = this.sanitizer;
-    final upload = uploadsFromDart ? activeUpload : null;
+    final upload = activeUpload;
+    final fromHandler = !uploadsFromDart;
     try {
       await Isolate.run(() async {
+        if (upload != null && fromHandler) {
+          await uploadNow(path, sanitizer, upload, reportId);
+          return;
+        }
         sanitizeAndRequest(path, sanitizer, reportId);
         if (upload != null) await uploadPending(path, upload, only: reportId);
       });

@@ -352,4 +352,46 @@ void main() {
     },
     timeout: const Timeout(Duration(minutes: 2)),
   );
+
+  test(
+    'requestUpload sends at once while the handler is running',
+    () async {
+      final uploads = <List<int>>[];
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => server.close(force: true));
+      server.listen((request) async {
+        final body = await request.fold<List<int>>([], (a, b) => a..addAll(b));
+        uploads.add(
+          request.headers.value('content-encoding') == 'gzip'
+              ? gzip.decode(body)
+              : body,
+        );
+        request.response.write('report-3');
+        await request.response.close();
+      });
+
+      // Written with nobody's consent, so held back unsent.
+      final crash = await runCrasher('segfault');
+      expect(crash.exitCode, isNot(0), reason: '${crash.stderr}');
+      await rawDump();
+
+      // A handler whose first pass is already over by the time the app asks:
+      // without the package sending it, the next pass is fifteen minutes off.
+      final asked = await Process.run(crasher.path, [
+        temp.path,
+        handler.path,
+        'request',
+        'http://127.0.0.1:${server.port}/upload',
+      ]);
+      expect(asked.exitCode, 0, reason: '${asked.stderr}');
+      expect(uploads, hasLength(1), reason: 'sent before requestUpload ended');
+      expect(leaks(uploads.single), isFalse);
+      expect(latin1.decode(uploads.single), contains('runtime-segfault'));
+
+      final report = await onlyReport();
+      expect(report.uploaded, isTrue);
+      expect(report.remoteId, 'report-3');
+    },
+    timeout: const Timeout(Duration(minutes: 2)),
+  );
 }

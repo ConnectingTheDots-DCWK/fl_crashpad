@@ -5,6 +5,11 @@ change lives beside the code in `CLAUDE.md`; this file only says what changed.
 
 ## Unreleased
 
+- **`requestUpload` sends at once on desktop**, as it did on Android and
+  iOS, when `start` was given an `uploadEndpoint`: the report has gone by the
+  time the future completes, instead of on the handler's next pass up to
+  fifteen minutes later.
+
 - **A refused upload is tried again on desktop**, on each later start, five
   times in all, as it already was on Android and iOS. Only while consent
   stands, or for a report the app asked for with `requestUpload`.
