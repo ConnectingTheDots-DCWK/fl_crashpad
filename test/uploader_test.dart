@@ -9,6 +9,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:fl_crashpad/fl_crashpad.dart';
+import 'package:fl_crashpad/src/ffi/bindings.dart'
+    show uploadFailed, uploadSkipped;
 import 'package:fl_crashpad/src/report_store.dart';
 import 'package:fl_crashpad/src/uploader.dart';
 import 'package:test/test.dart';
@@ -186,6 +188,43 @@ void main() {
     expect(kept['uploadAttempts'], 1);
     expect(kept['uploaded'], isFalse);
   }, timeout: const Timeout(Duration(minutes: 2)));
+
+  test('a refused report is asked for again only while consent stands, '
+      'and one the app asked for whatever it says', () async {
+    final id = await crash();
+    // After the crash: the crasher's start says no consent.
+    final database = CrashReportDatabase(temp)..uploadConsent = true;
+    processReports(temp.path, ReportSanitizer.forHost(), decide: true);
+    // What a desktop handler leaves behind after one refusal: an attempt
+    // recorded, and the report filed as completed, unsent.
+    recordNativeUpload(temp.path, id, uploadFailed);
+    recordNativeUpload(temp.path, id, uploadSkipped);
+    Map<String, Object?> native() =>
+        listNativeReports(temp.path).singleWhere((r) => r['id'] == id);
+    expect(native()['state'], 'completed');
+    expect(native()['uploadAttempts'], 1);
+
+    database.uploadConsent = false;
+    processReports(temp.path, ReportSanitizer.forHost(), decide: true);
+    expect(native()['state'], 'completed', reason: 'consent was withdrawn');
+
+    database.uploadConsent = true;
+    processReports(temp.path, ReportSanitizer.forHost(), decide: true);
+    expect(native()['state'], 'pending', reason: 'asked for again');
+
+    recordNativeUpload(temp.path, id, uploadSkipped);
+    database.uploadConsent = false;
+    sanitizeAndRequest(temp.path, ReportSanitizer.forHost(), id);
+    recordNativeUpload(temp.path, id, uploadFailed);
+    recordNativeUpload(temp.path, id, uploadSkipped);
+    processReports(temp.path, ReportSanitizer.forHost(), decide: true);
+    expect(
+      native()['state'],
+      'pending',
+      reason: 'the app asked for it by name',
+    );
+  }, timeout: const Timeout(Duration(minutes: 2)));
+
   test(
     'a report the handler is uploading keeps its marker',
     () async {

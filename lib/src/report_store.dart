@@ -31,6 +31,10 @@ import 'sanitizer.dart';
 
 const int _version = 1;
 
+/// How many times a report is tried before it is given up on: Crashpad's own
+/// limit, on iOS, and `kAttempts` in the shim's record of an upload.
+const int uploadAttemptLimit = 5;
+
 /// The package's own settings for one database.
 class StoreSettings {
   const StoreSettings({required this.uploadConsent, required this.sanitize});
@@ -82,7 +86,8 @@ class _Marker {
   final int rules;
   final int masked;
 
-  /// `requested`, `held`, or null when no start has decided yet.
+  /// `requested` (by a start, under consent), `asked` (by the app, through
+  /// `requestUpload`), `held`, or null when no start has decided yet.
   final String? decision;
 
   static File file(String database, String id) =>
@@ -183,6 +188,9 @@ class StoredReport {
         decision: decision,
       )..write(database, id);
     }
+    if (decide && _worthRetrying(json, marker, settings)) {
+      requestNativeUpload(database, id);
+    }
     reports.add(StoredReport(json, sanitized: marker != null));
   }
 
@@ -190,23 +198,55 @@ class StoredReport {
   return (reports: reports, finished: finished);
 }
 
+/// Whether a report whose upload failed is to be asked for again.
+///
+/// Crashpad's desktop handler gives up on a report after one failed upload and
+/// files it as completed, unsent; it retries nowhere but iOS. So each start
+/// asks again for a report that has been tried, but fewer than
+/// [uploadAttemptLimit] times — as long as somebody still wants it sent: the
+/// app asked for it, or it went under a consent that has not been withdrawn.
+/// (On mobile a refused report stays pending, and the uploader retries it.)
+bool _worthRetrying(
+  Map<String, Object?> json,
+  _Marker? marker,
+  StoreSettings settings,
+) {
+  final attempts = json['uploadAttempts']! as int;
+  if (json['uploaded'] == true ||
+      json['state'] != 'completed' ||
+      attempts == 0 ||
+      attempts >= uploadAttemptLimit) {
+    return false;
+  }
+  return switch (marker?.decision) {
+    'asked' => true,
+    'requested' => settings.uploadConsent,
+    _ => false,
+  };
+}
+
 /// Sanitises one report if it is not already, then asks for its upload.
 void sanitizeAndRequest(String database, ReportSanitizer sanitizer, String id) {
   final settings = StoreSettings.read(database);
-  if (settings.sanitize && _Marker.read(database, id) == null) {
-    final report = listNativeReports(database).firstWhere(
-      (r) => r['id'] == id,
-      orElse: () => throw CrashpadNotFound(id),
-    );
-    final masked = sanitizeReportFiles(
-      sanitizer,
-      File(report['path']! as String),
-      attachments: Directory('$database/attachments/$id'),
-    );
+  if (settings.sanitize) {
+    var marker = _Marker.read(database, id);
+    if (marker == null) {
+      final report = listNativeReports(database).firstWhere(
+        (r) => r['id'] == id,
+        orElse: () => throw CrashpadNotFound(id),
+      );
+      final masked = sanitizeReportFiles(
+        sanitizer,
+        File(report['path']! as String),
+        attachments: Directory('$database/attachments/$id'),
+      );
+      marker = _Marker(rules: ReportSanitizer.rulesVersion, masked: masked);
+    }
+    // Asked for by name, so it is retried whatever the consent says.
     _Marker(
-      rules: ReportSanitizer.rulesVersion,
-      masked: masked,
-      decision: 'requested',
+      rules: marker.rules,
+      masked: marker.masked,
+      decision: 'asked',
     ).write(database, id);
   }
   requestNativeUpload(database, id);

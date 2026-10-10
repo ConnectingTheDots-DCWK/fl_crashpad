@@ -202,7 +202,9 @@ sends them itself, from Dart, in the background once `start` returns — the
 same request, built from the same fields by Crashpad's own code — because
 Crashpad's Android handler can only speak plain http. Either way a report
 goes on the launch after the crash, once it has been sanitised, and one that
-cannot be sent is tried again on later launches, five times in all.
+cannot be sent is tried again on later launches, five times in all — as long
+as the user still agrees, or the app asked for that report with
+`requestUpload`. Withdrawing consent stops the retries.
 
 Each report is POSTed as `multipart/form-data`: the minidump in
 `upload_file_minidump`, every annotation as a field of its own — read back out

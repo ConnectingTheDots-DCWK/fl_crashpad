@@ -286,4 +286,70 @@ void main() {
     },
     timeout: const Timeout(Duration(minutes: 2)),
   );
+
+  test(
+    'an upload the server refused is tried again on the next start',
+    () async {
+      var answers = 0;
+      var status = HttpStatus.internalServerError;
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => server.close(force: true));
+      server.listen((request) async {
+        await request.drain<void>();
+        answers++;
+        request.response
+          ..statusCode = status
+          ..write('report-2');
+        await request.response.close();
+      });
+      final url = 'http://127.0.0.1:${server.port}/upload';
+
+      final crash = await Process.run(crasher.path, [
+        temp.path,
+        handler.path,
+        'segfault',
+        url,
+      ]);
+      expect(crash.exitCode, isNot(0), reason: '${crash.stderr}');
+      await rawDump();
+
+      /// Starts the crasher and waits until the server has answered [count]
+      /// times and the handler has written down what came of it.
+      Future<CrashReport> startUntilAnswered(int count) async {
+        final process = await Process.start(crasher.path, [
+          temp.path,
+          handler.path,
+          'wait',
+          url,
+        ]);
+        try {
+          final deadline = DateTime.now().add(const Duration(seconds: 30));
+          while (DateTime.now().isBefore(deadline)) {
+            if (answers >= count) {
+              final report = await onlyReport();
+              if (report.uploaded ||
+                  report.state == CrashReportState.completed) {
+                return report;
+              }
+            }
+            await Future<void>.delayed(const Duration(milliseconds: 20));
+          }
+          fail('the server was not asked $count times');
+        } finally {
+          process.kill();
+          await process.exitCode;
+        }
+      }
+
+      final refused = await startUntilAnswered(1);
+      expect(refused.uploaded, isFalse);
+      expect(refused.uploadAttempts, 1);
+
+      status = HttpStatus.ok;
+      final sent = await startUntilAnswered(2);
+      expect(sent.uploaded, isTrue, reason: 'asked for again by the start');
+      expect(sent.remoteId, 'report-2');
+    },
+    timeout: const Timeout(Duration(minutes: 2)),
+  );
 }

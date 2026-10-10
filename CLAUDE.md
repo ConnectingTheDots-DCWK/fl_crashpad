@@ -412,6 +412,15 @@ carries the full argument):
 - **The new handler's first pass sends it**, because its upload thread starts
   with an immediate pass. Anything requested later goes on the next 15-minute
   pass.
+- **A refused upload is asked for again by the next start**, up to five
+  attempts (`uploadAttemptLimit`, the shim's `kAttempts`). Crashpad's desktop
+  handler gives up after one and files the report completed, unsent — it
+  retries only on iOS — and the README promised five everywhere. Only while
+  somebody still wants it: decision `asked` (the app named it in
+  `requestUpload`) always, `requested` (a start, under consent) only while
+  consent stands. `uploader_test` pins both halves and the retry, each proved
+  red; `crash_test` proves it against a real handler and a server that
+  refuses once.
 - **The upload's form fields are read back out of the minidump**
   (`BreakpadHTTPFormParametersFromMinidump`), so they are sanitised too.
 

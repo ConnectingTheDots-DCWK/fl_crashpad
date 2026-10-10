@@ -5,6 +5,10 @@ change lives beside the code in `CLAUDE.md`; this file only says what changed.
 
 ## Unreleased
 
+- **A refused upload is tried again on desktop**, on each later start, five
+  times in all, as it already was on Android and iOS. Only while consent
+  stands, or for a report the app asked for with `requestUpload`.
+
 - **Listing reports while one was being uploaded** no longer makes the
   package forget it had sanitised that report: on Linux and Android,
   `CrashReportDatabase.reports()` during a handler's upload had it cleaned a
