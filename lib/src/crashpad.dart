@@ -93,7 +93,7 @@ abstract final class Crashpad {
   /// On Android and iOS nothing extra runs: Android starts its handler only at
   /// the moment of a crash, and iOS handles crashes inside the process. Their
   /// reports are uploaded by this package, on the launch after the crash, once
-  /// sanitised — see [CrashpadOptions.upload].
+  /// sanitised — see [CrashpadOptions.uploadEndpoint].
   ///
   /// Throws a [CrashpadException] when anything prevents the start.
   static void start(CrashpadOptions options) {

@@ -186,7 +186,7 @@ class CrashReportDatabase {
   /// Records that the app sent [reportId] itself, and that where it went
   /// knows it as [remoteId] — for an app that uploads reports its own way,
   /// from [reports], rather than giving [Crashpad.start] a
-  /// [CrashpadOptions.upload]. The report then reads as [CrashReport.uploaded]
+  /// [CrashpadOptions.uploadEndpoint]. The report then reads as [CrashReport.uploaded]
   /// with that [CrashReport.remoteId], and nothing of this package sends it
   /// again.
   ///

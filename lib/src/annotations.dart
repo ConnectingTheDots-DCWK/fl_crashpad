@@ -13,7 +13,7 @@ import 'ffi/bindings.dart';
 /// are small: at most [maxEntries] of them, each key at most [maxKeyBytes]
 /// and each value at most [maxValueBytes] bytes of UTF-8. Anything larger
 /// belongs in an attachment ([CrashpadOptions.attachments]); anything fixed
-/// for the life of the process belongs in [CrashpadOptions.annotations], which
+/// for the life of the process belongs in [CrashpadOptions.fixedAnnotations], which
 /// travel on the handler's command line and have no such limit.
 ///
 /// They can be set before [Crashpad.start], and a native library in the same
