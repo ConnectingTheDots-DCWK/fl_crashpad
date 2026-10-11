@@ -8,7 +8,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:fl_crashpad/fl_crashpad.dart';
-import 'package:fl_crashpad/src/build/bundle.dart';
 import 'package:test/test.dart';
 
 import 'support/artifacts.dart';
@@ -396,35 +395,17 @@ void main() {
     timeout: const Timeout(Duration(minutes: 2)),
   );
 
-  test(
-    'a `dart build cli` bundle names the fix, then reports once bundled',
-    () async {
-      // The crasher is itself a `dart build cli` bundle: bin/crasher, and the
-      // library the hook put in lib/ — and no handler, as for any Dart app.
-      final bundle = crasher.parent.parent;
-      Future<ProcessResult> dump() =>
-          Process.run(crasher.path, [temp.path, 'default', 'dump']);
-
-      final missing = await dump();
-      expect(missing.exitCode, isNot(0));
-      expect('${missing.stderr}', contains('handlerMissing'));
-      expect('${missing.stderr}', contains('fl_crashpad:bundle'));
-
-      final written = bundleHandler(hostArtifacts(), bundle);
-      addTearDown(() {
-        for (final file in written) {
-          file.deleteSync();
-        }
-      });
-      expect(
-        written.map((f) => f.parent.uri.pathSegments.lastWhere((s) => s != '')),
-        everyElement('lib'),
-      );
-
-      final bundled = await dump();
-      expect(bundled.exitCode, 0, reason: '${bundled.stderr}');
-      await expectSanitisedReport('dump');
-    },
-    timeout: const Timeout(Duration(minutes: 2)),
-  );
+  test('a start with no handler where the build puts it says where it looked '
+      'and what to do', () async {
+    // The crasher is a `dart build cli` bundle, which nothing gives a handler.
+    final result = await Process.run(crasher.path, [
+      temp.path,
+      'default',
+      'dump',
+    ]);
+    expect(result.exitCode, isNot(0));
+    expect('${result.stderr}', contains('handlerMissing'));
+    expect('${result.stderr}', contains('no crashpad_handler at '));
+    expect('${result.stderr}', contains('CrashpadOptions.handler'));
+  });
 }

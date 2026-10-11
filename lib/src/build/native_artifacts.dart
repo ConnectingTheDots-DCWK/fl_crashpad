@@ -17,7 +17,6 @@
 //     bin/crashpad_handler.rev  the Crashpad revision the handler was built from
 //     manifest.json
 import 'dart:convert';
-import 'dart:ffi' show Abi;
 import 'dart:io';
 import 'dart:typed_data' show BytesBuilder;
 
@@ -356,7 +355,7 @@ class ArtifactResolver {
       if (!unpacked.hasFiles) {
         throw ArtifactUnavailable('$url does not have the expected layout');
       }
-      if (unpacked.handler case final handler?) makeExecutable(handler);
+      if (unpacked.handler case final handler?) _makeExecutable(handler);
       unpacked.completeStamp.writeAsStringSync(sha256Expected);
       commit(staging, destination);
     } finally {
@@ -396,24 +395,12 @@ class ArtifactResolver {
       client.close();
     }
   }
-}
 
-/// Gives [file] mode 755, which neither an archive nor a copy promises to
-/// keep. Nothing to do on Windows.
-void makeExecutable(File file) {
-  if (Platform.isWindows) return;
-  final result = Process.runSync('chmod', ['755', file.path]);
-  if (result.exitCode != 0) {
-    throw ArtifactUnavailable('chmod 755 ${file.path}: ${result.stderr}');
+  static void _makeExecutable(File file) {
+    if (Platform.isWindows) return;
+    final result = Process.runSync('chmod', ['755', file.path]);
+    if (result.exitCode != 0) {
+      throw ArtifactUnavailable('chmod 755 ${file.path}: ${result.stderr}');
+    }
   }
-}
-
-/// The desktop target of the machine this runs on, or null where there is no
-/// build for it.
-NativeTarget? hostTarget() {
-  final arch = switch (Abi.current()) {
-    Abi.linuxArm64 || Abi.windowsArm64 || Abi.macosArm64 => 'arm64',
-    _ => 'x64',
-  };
-  return NativeTarget.of(Platform.operatingSystem, arch);
 }

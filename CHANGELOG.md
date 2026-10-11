@@ -5,12 +5,10 @@ change lives beside the code in `CLAUDE.md`; this file only says what changed.
 
 ## Unreleased
 
-- **Dart apps can use it**: `dart pub add fl_crashpad` works without
-  Flutter, on Linux, Windows and macOS. Under `dart run` and `dart test` the
-  handler is found with nothing to set up; after `dart build cli`,
-  `dart run fl_crashpad:bundle <bundle>` puts it in the bundle.
-- `CrashpadHandler.candidates` lists every place `defaultPath` looks, in
-  order, and a `start` that finds no handler names them and the fix.
+- A `start` that finds no handler where the build puts it says where it
+  looked, what normally puts it there, and that `CrashpadOptions.handler`
+  takes a custom place — instead of only that it is missing.
+- The API reference no longer links to options renamed in 1.0.
 
 ## 1.0.2
 

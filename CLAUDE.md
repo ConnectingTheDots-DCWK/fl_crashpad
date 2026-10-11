@@ -125,28 +125,18 @@ flutter_tools 3.41.9:
 - **Linux:** the runner's `install(DIRECTORY native_assets)` makes files 0644.
 - **Windows:** the only platform where it would have worked.
 
-**A Dart app takes it too** (1.0.3, the user's ask after a standalone Dart
-SDK refused it):
-- **No `flutter:` constraint.** A standalone SDK refuses any package that
-  names one, and it bought nothing: `sdk: ^3.11.5` already excludes every
-  Flutter older than 3.41. The `flutter: plugin:` block stays — pub ignores it
-  outside Flutter, and it is what places the handler in a Flutter build.
-- **`dart run fl_crashpad:bundle <bundle>`** (`lib/src/build/bundle.dart`)
-  copies the handler, its `.rev` and on Windows `crashpad_wer.dll` from the
-  cache into a `dart build cli` bundle's `lib/`, beside the library the hook
-  put there. A hook still cannot ship the executable; a step the user runs is
-  the honest answer until `dart build` has a place for one.
-- **`CrashpadHandler.candidates`, in order:** the Flutter place, then
-  `<bundle>/lib/`, then the per-user cache — **only when the running program
-  is `dart` itself** (`dart run`, `dart test`). A shipped app never is, so a
-  bundle missing its handler cannot be covered up by the developer's cache;
-  `api_test` pins the rule and was proved red without it.
-- `start` with the default path and no handler throws `handlerMissing`
-  naming every place tried and the fix. `crash_test` runs the crasher — a
-  `dart build cli` bundle itself — before and after `bundleHandler`.
-- Proved from a standalone Dart 3.11.5 SDK with no Flutter on the machine,
-  under `env -i`: `dart run`, an unbundled build (the message), a bundled one,
-  and the bundle copied elsewhere with the cache moved away, crashing for real.
+**Flutter only, by pub's rules rather than ours** (2026-10-11). The code is
+pure Dart, and a Dart app could use it — proved from a standalone Dart SDK
+with the constraint removed, a handler-copying `bundle` command and a
+cache fallback under `dart run` (`51d9f61`, reverted). But pub refuses to
+publish a package with `flutter: plugin: platforms:` and no Flutter
+constraint, and a standalone SDK refuses any package with one, so one
+package cannot be both. The user chose Flutter only for now. If Dart users
+are ever worth it, the way is a split: a pure-Dart core package (API,
+sanitiser, hook, prefetch, `bundle`) and `fl_crashpad` as the thin plugin
+re-exporting it, as sqlite3 and sqlite3_flutter_libs do. **`pana` does not
+run that check — `dart pub publish --dry-run` does, and its whole output is
+read before a cut.**
 
 **One artifact cache, three readers.** The layout and resolution order are
 written three times, and all three change together:

@@ -1,5 +1,5 @@
 name: fl_crashpad
-description: "Native crash reporting for Flutter and Dart apps with Google Crashpad: sanitised minidumps of crashes the Dart VM never sees, on desktop and mobile, for any minidump backend."
+description: "Native crash reporting for Flutter with Google Crashpad: sanitised minidumps of crashes the Dart VM never sees, on desktop, Android and iOS, for any minidump backend."
 version: 1.0.2
 repository: https://github.com/WilliamKarolDiCioccio/fl_crashpad
 topics:
@@ -26,14 +26,9 @@ funding:
 # `dart:io`. That is what lets the package's own suite run under `dart test`,
 # crash tests and all, and what lets the build hook import `lib/src/build/`.
 # The `no-flutter` hook in .pre-commit-config.yaml checks it.
-#
-# **No `flutter:` constraint either**, so that a Dart app can depend on it: a
-# standalone Dart SDK refuses any package that names one ("requires the
-# Flutter SDK"). Nothing is lost by it: Dart 3.11 is Flutter 3.41's, the
-# oldest Flutter the hooks work in, so the `sdk:` bound keeps every older
-# Flutter out on its own.
 environment:
   sdk: ^3.11.5
+  flutter: ">=3.41.0"
 
 # The first two are the build hook's: it verifies a downloaded archive's
 # sha256 and unpacks the tar.gz itself, the same on every host. `hooks` and

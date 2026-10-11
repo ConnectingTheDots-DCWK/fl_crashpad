@@ -112,14 +112,11 @@ abstract final class Crashpad {
         ? null
         : options.handler ?? CrashpadHandler.defaultPath();
     if (handler != null && options.handler == null && !handler.existsSync()) {
-      // The one way a Dart app is likely to meet this, so it names the fix.
       throw CrashpadException(
         CrashpadErrorCode.handlerMissing,
-        'no crashpad_handler in any of '
-        '${CrashpadHandler.candidates(os: Platform.operatingSystem, executable: Platform.resolvedExecutable).map((f) => f.path).join(', ')}. '
-        'A Flutter build puts it in place; after `dart build cli`, run '
-        '`dart run fl_crashpad:bundle <bundle directory>`; or pass '
-        'CrashpadOptions.handler',
+        'no crashpad_handler at ${handler.path}, where a Flutter build of '
+        'this package puts it. Built some other way, the app has to ship it '
+        'itself and pass its path as CrashpadOptions.handler',
       );
     }
     final werModule = options.registerWerModule
