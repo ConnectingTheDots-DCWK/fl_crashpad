@@ -3,7 +3,7 @@
 What an app can do with each version, newest first. The reasoning behind a
 change lives beside the code in `CLAUDE.md`; this file only says what changed.
 
-## Unreleased
+## 1.0.3
 
 - A `start` that finds no handler where the build puts it says where it
   looked, what normally puts it there, and that `CrashpadOptions.handler`
