@@ -3,6 +3,15 @@
 What an app can do with each version, newest first. The reasoning behind a
 change lives beside the code in `CLAUDE.md`; this file only says what changed.
 
+## 1.0.3
+
+- **Dart apps can use it**: `dart pub add fl_crashpad` works without
+  Flutter, on Linux, Windows and macOS. Under `dart run` and `dart test` the
+  handler is found with nothing to set up; after `dart build cli`,
+  `dart run fl_crashpad:bundle <bundle>` puts it in the bundle.
+- `CrashpadHandler.candidates` lists every place `defaultPath` looks, in
+  order, and a `start` that finds no handler names them and the fix.
+
 ## 1.0.2
 
 - **`requestUpload` sends at once on desktop**, as it did on Android and

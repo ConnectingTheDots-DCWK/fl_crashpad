@@ -7,7 +7,6 @@
 //
 // Only the targets this machine can build apps for: its own desktop, Android
 // from anywhere, and iOS from a Mac.
-import 'dart:ffi' show Abi;
 import 'dart:io';
 import 'dart:isolate';
 
@@ -34,7 +33,12 @@ Future<void> main(List<String> arguments) async {
               t.os == 'android' ||
               (t.os == 'ios' && os == 'macos'),
         )
-      : [_host()];
+      : [
+          hostTarget() ??
+              (throw UnsupportedError(
+                'fl_crashpad has no build for this machine',
+              )),
+        ];
   var failed = false;
   for (final target in targets) {
     try {
@@ -46,13 +50,4 @@ Future<void> main(List<String> arguments) async {
     }
   }
   if (failed) exitCode = 1;
-}
-
-NativeTarget _host() {
-  final arch = switch (Abi.current()) {
-    Abi.linuxArm64 || Abi.windowsArm64 || Abi.macosArm64 => 'arm64',
-    _ => 'x64',
-  };
-  return NativeTarget.of(Platform.operatingSystem, arch) ??
-      (throw UnsupportedError('fl_crashpad has no build for this machine'));
 }

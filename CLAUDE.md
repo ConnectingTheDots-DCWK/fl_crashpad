@@ -125,6 +125,29 @@ flutter_tools 3.41.9:
 - **Linux:** the runner's `install(DIRECTORY native_assets)` makes files 0644.
 - **Windows:** the only platform where it would have worked.
 
+**A Dart app takes it too** (1.0.3, the user's ask after a standalone Dart
+SDK refused it):
+- **No `flutter:` constraint.** A standalone SDK refuses any package that
+  names one, and it bought nothing: `sdk: ^3.11.5` already excludes every
+  Flutter older than 3.41. The `flutter: plugin:` block stays — pub ignores it
+  outside Flutter, and it is what places the handler in a Flutter build.
+- **`dart run fl_crashpad:bundle <bundle>`** (`lib/src/build/bundle.dart`)
+  copies the handler, its `.rev` and on Windows `crashpad_wer.dll` from the
+  cache into a `dart build cli` bundle's `lib/`, beside the library the hook
+  put there. A hook still cannot ship the executable; a step the user runs is
+  the honest answer until `dart build` has a place for one.
+- **`CrashpadHandler.candidates`, in order:** the Flutter place, then
+  `<bundle>/lib/`, then the per-user cache — **only when the running program
+  is `dart` itself** (`dart run`, `dart test`). A shipped app never is, so a
+  bundle missing its handler cannot be covered up by the developer's cache;
+  `api_test` pins the rule and was proved red without it.
+- `start` with the default path and no handler throws `handlerMissing`
+  naming every place tried and the fix. `crash_test` runs the crasher — a
+  `dart build cli` bundle itself — before and after `bundleHandler`.
+- Proved from a standalone Dart 3.11.5 SDK with no Flutter on the machine,
+  under `env -i`: `dart run`, an unbundled build (the message), a bundled one,
+  and the bundle copied elsewhere with the cache moved away, crashing for real.
+
 **One artifact cache, three readers.** The layout and resolution order are
 written three times, and all three change together:
 - `lib/src/build/native_artifacts.dart` (the hook and `prefetch`). This one is

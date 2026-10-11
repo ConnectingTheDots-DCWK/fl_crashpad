@@ -47,6 +47,37 @@ void main() {
       );
     });
 
+    test('a `dart build cli` bundle is tried after the Flutter place, and the '
+        "cache only when the program is the Dart VM itself", () {
+      File cached() => File('/cache/crashpad_handler');
+      List<String> paths(String os, String executable) => [
+        for (final file in CrashpadHandler.candidates(
+          os: os,
+          executable: executable,
+          cached: cached,
+        ))
+          file.path,
+      ];
+      expect(
+        paths('linux', '/opt/tool/bundle/bin/tool'),
+        [
+          '/opt/tool/bundle/bin/lib/crashpad_handler',
+          '/opt/tool/bundle/lib/crashpad_handler',
+        ],
+        reason: 'a shipped app never falls back on this machine',
+      );
+      expect(paths('linux', '/sdk/bin/dart'), [
+        '/sdk/bin/lib/crashpad_handler',
+        '/sdk/lib/crashpad_handler',
+        '/cache/crashpad_handler',
+      ]);
+      expect(paths('windows', r'C:\Tool\bundle\bin\tool.exe'), [
+        r'C:\Tool\bundle\bin\crashpad_handler.exe',
+        r'C:\Tool\bundle\lib\crashpad_handler.exe',
+      ]);
+      expect(paths('windows', r'C:\sdk\bin\DART.EXE'), hasLength(3));
+    });
+
     test('macOS: the Helpers directory of the pod framework', () {
       expect(
         CrashpadHandler.pathFor(

@@ -3,6 +3,9 @@
 //
 //   crasher <database> <handler> <kind> [<upload url>]
 //
+// handler `default` leaves CrashpadOptions.handler unset, so that start looks
+// where CrashpadHandler.defaultPath does.
+//
 // A package of its own, built with `dart build cli` by crash_test.dart, so that
 // it carries its own copy of the native library. Run with `dart run` instead,
 // it would re-run the build hook, which rewrites the library the test runner
@@ -32,7 +35,7 @@ Future<void> main(List<String> args) async {
   Crashpad.start(
     CrashpadOptions(
       databaseDirectory: Directory(database),
-      handler: File(handler),
+      handler: handler == 'default' ? null : File(handler),
       fixedAnnotations: {'fl_crashpad.process': 'process-$kind'},
       uploadEndpoint: url == null
           ? null

@@ -1,6 +1,6 @@
 # fl_crashpad
 
-Native crash reporting for Flutter apps, with
+Native crash reporting for Flutter and Dart apps, with
 [Google Crashpad](https://chromium.googlesource.com/crashpad/crashpad) — the
 crash reporter Chrome, Electron and a good part of the software you use ship
 with.
@@ -20,6 +20,47 @@ flutter pub add fl_crashpad
 That is all the setup there is. The first build downloads the native half for
 your platform — under a megabyte on Linux, verified against a SHA-256 digest pinned in the
 package — into a per-user cache, and every later build reuses it.
+
+### In a Dart app
+
+The package is pure Dart below the surface — `dart:ffi` and `dart:io`, no
+Flutter — so a command-line tool or a server takes it too, on Linux, Windows
+and macOS:
+
+```sh
+dart pub add fl_crashpad
+```
+
+`dart run` and `dart test` need nothing more: the handler is found in the
+per-user cache the build filled. A **`dart build cli` bundle** needs one
+step, because a Dart build has no place for the handler executable the way a
+Flutter build has:
+
+```sh
+dart build cli
+dart run fl_crashpad:bundle build/cli/bundle
+```
+
+It copies `crashpad_handler` into the bundle's `lib/`, beside the library the
+build put there, which is where `start` looks. Ship the bundle whole. Without
+the step, `start` throws `CrashpadException(handlerMissing)` and says so.
+
+```dart
+import 'dart:io';
+
+import 'package:fl_crashpad/fl_crashpad.dart';
+
+void main() {
+  Crashpad.start(CrashpadOptions(
+    databaseDirectory: Directory('${Platform.environment['HOME']}/.my_tool/crashpad'),
+  ));
+  // ...
+}
+```
+
+The Dart VM installs a crash handler of its own, which Crashpad passes the
+signal on to once its report is written: a crash in a Dart CLI still prints
+the VM's `===== CRASH =====` dump to stderr after the report is safe.
 
 ## Start it
 
@@ -385,6 +426,13 @@ package — nothing in your app's runners:
 | Linux | `bundle/lib/libfl_crashpad_native.so` | `bundle/lib/crashpad_handler`, mode 755 |
 | Windows | beside the `.exe` | `crashpad_handler.exe` and `crashpad_wer.dll` beside the `.exe` |
 | macOS | `Contents/Frameworks/fl_crashpad_native.framework` | `Contents/Frameworks/fl_crashpad.framework/Versions/A/Helpers/crashpad_handler` |
+
+A Dart app built with `dart build cli` gets the library from the same hook,
+in `bundle/lib/`, and the handler from `dart run fl_crashpad:bundle`, beside
+it — on Windows with `crashpad_wer.dll`. Under `dart run` and `dart test`,
+which are the Dart VM itself, the handler is taken from the per-user cache
+instead; nothing a user installs is ever the `dart` executable, so a shipped
+bundle never falls back on it.
 
 `CrashpadHandler.defaultPath()` knows those places. For a custom layout, pass
 `CrashpadOptions.handler`.

@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:fl_crashpad/fl_crashpad.dart';
+import 'package:fl_crashpad/src/build/bundle.dart';
 import 'package:test/test.dart';
 
 import 'support/artifacts.dart';
@@ -391,6 +392,38 @@ void main() {
       final report = await onlyReport();
       expect(report.uploaded, isTrue);
       expect(report.remoteId, 'report-3');
+    },
+    timeout: const Timeout(Duration(minutes: 2)),
+  );
+
+  test(
+    'a `dart build cli` bundle names the fix, then reports once bundled',
+    () async {
+      // The crasher is itself a `dart build cli` bundle: bin/crasher, and the
+      // library the hook put in lib/ — and no handler, as for any Dart app.
+      final bundle = crasher.parent.parent;
+      Future<ProcessResult> dump() =>
+          Process.run(crasher.path, [temp.path, 'default', 'dump']);
+
+      final missing = await dump();
+      expect(missing.exitCode, isNot(0));
+      expect('${missing.stderr}', contains('handlerMissing'));
+      expect('${missing.stderr}', contains('fl_crashpad:bundle'));
+
+      final written = bundleHandler(hostArtifacts(), bundle);
+      addTearDown(() {
+        for (final file in written) {
+          file.deleteSync();
+        }
+      });
+      expect(
+        written.map((f) => f.parent.uri.pathSegments.lastWhere((s) => s != '')),
+        everyElement('lib'),
+      );
+
+      final bundled = await dump();
+      expect(bundled.exitCode, 0, reason: '${bundled.stderr}');
+      await expectSanitisedReport('dump');
     },
     timeout: const Timeout(Duration(minutes: 2)),
   );
