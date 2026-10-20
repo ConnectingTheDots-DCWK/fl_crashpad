@@ -14,6 +14,15 @@ PATH for a session, which is what the bare `dart run` lines below assume:
 export PATH="$HOME/fvm/versions/$(jq -r .flutter .fvmrc)/bin:$PATH"
 ```
 
+**The rest of the toolchain is `mise.toml`'s**: the Python `build_native.dart`
+runs Crashpad's scripts with, the JDK the example's Android build needs, and
+pre-commit. `mise install` puts them on a machine, and `mise run doctor`
+(`tool/doctor.sh`) checks everything this file names — clang, the curl and
+zlib headers, the native half in the cache, the NDK — and says how to fix what
+is missing. `native.yml` reads the Python minor and the JDK major from the same
+pins through `tool/mise_pin.sh`. None of these files reaches the published
+package: `.pubignore` names them.
+
 **The tests need the native half.** Before anything else, once per machine and
 again after touching `native/` or the lock:
 

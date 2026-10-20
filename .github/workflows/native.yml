@@ -100,9 +100,15 @@ jobs:
           echo "TEST_DART=$RUNNER_TEMP/dart-arm64/dart-sdk/bin/dart.exe" >> "$GITHUB_ENV"
           "$RUNNER_TEMP/dart-arm64/dart-sdk/bin/dart.exe" --version
 
+      # mise.toml's minor, which tool/build_native.dart runs Crashpad's build
+      # scripts with on a developer's machine too.
+      - name: Read the pinned Python
+        id: python
+        shell: bash
+        run: echo "version=$(bash tool/mise_pin.sh python | cut -d. -f1,2)" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ steps.python.outputs.version }}
 
       # Crashpad's libcurl upload transport needs the headers to build; at run
       # time it dlopens libcurl, so the archive does not depend on it.
@@ -229,17 +235,27 @@ jobs:
           flutter-version: ${{ steps.fvm.outputs.version }}
           cache: true
 
+      # mise.toml's minor, which tool/build_native.dart runs Crashpad's build
+      # scripts with on a developer's machine too.
+      - name: Read the pinned Python
+        id: python
+        shell: bash
+        run: echo "version=$(bash tool/mise_pin.sh python | cut -d. -f1,2)" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ steps.python.outputs.version }}
 
       # The runner's default JDK is 11, and the Android Gradle plugin the
       # example's Flutter generates needs 17.
+      - name: Read the pinned JDK
+        id: java
+        if: runner.os == 'Linux'
+        run: echo "major=$(bash tool/mise_pin.sh java | sed 's/^temurin-//' | cut -d. -f1)" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-java@v4
         if: runner.os == 'Linux'
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: ${{ steps.java.outputs.major }}
 
       - name: Build the native half
         shell: bash

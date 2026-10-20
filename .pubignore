@@ -21,3 +21,9 @@ example/build/
 example/.dart_tool/
 test/crasher/.dart_tool/
 test/crasher/pubspec.lock
+
+# mise: the toolchain manifest and its doctor, for working on this package.
+mise.toml
+mise.lock
+doctor.sh
+mise_pin.sh

@@ -1,0 +1,35 @@
+# The tools this repository needs at a version, and the one place each
+# version is written. `mise install` puts them on a machine; `mise run doctor`
+# checks a machine against this file and the pins that live elsewhere;
+# native.yml reads it through tool/mise_pin.sh rather than spelling them.
+#
+# What is not here, on purpose: Flutter is .fvmrc's, under fvm; Crashpad, its
+# dependencies, GN and ninja are native/artifacts.lock.json's, fetched by
+# tool/build_native.dart; the compilers, the Android SDK and NDK and Xcode are
+# the platform's — clang 17 or newer on Linux, which native.yml takes from
+# apt.llvm.org because no prebuilt clang is small enough to pin here. The
+# doctor checks all of them.
+#
+# Prebuilt releases only, so `mise install` compiles nothing. Nothing here
+# reaches the published package: .pubignore keeps these files out.
+min_version = { soft = "2026.10.0" }
+
+# mise.lock holds every tool's URL and checksum for these platforms, so an
+# install fetches the same bytes everywhere. `mise lock` after changing a pin.
+[settings]
+lockfile_platforms = ["linux-x64", "linux-arm64", "macos-arm64", "macos-x64", "windows-x64"]
+
+[tools]
+# What tool/build_native.dart runs Crashpad's build scripts with. native.yml
+# installs the same minor.
+python = "3.12.15"
+# The JDK the example's Android Gradle plugin needs. native.yml installs the
+# same major.
+java = "temurin-17.0.20+101"
+
+# Not published for Windows as a binary; there it is `pip install pre-commit`.
+"aqua:pre-commit/pre-commit" = { version = "4.7.0", os = ["unix"] }
+
+[tasks.doctor]
+description = "Check this machine has every tool the repository pins, and say how to fix what it lacks."
+run = "bash tool/doctor.sh"
