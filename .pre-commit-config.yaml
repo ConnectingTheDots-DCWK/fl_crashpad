@@ -8,6 +8,16 @@
 # The tests need the native half in the artifact cache: build it once with
 # `fvm dart run tool/build_native.dart --install` (see CLAUDE.md).
 #
+# Every entry starts `env -u GIT_DIR -u GIT_INDEX_FILE`. A commit made from a
+# worktree hands its hook both, and every git a tool runs inherits them:
+# flutter works its own version out with git in its SDK directory, read this
+# repository instead, found no tags and said 0.0.0-unknown, and fvm took that
+# for a broken SDK — deleted it, then pointed the repository's origin at its
+# Flutter mirror and wrote Flutter's sixteen thousand files into the index
+# while reinstalling. That happened in fl_nodes_v2, whose hooks carried the
+# guard first; `pre-commit run` by hand sets neither, which is why it passed.
+# None of these hooks needs git.
+#
 #   pre-commit install          once, per clone
 #   pre-commit run --all-files  to sweep the whole tree
 
@@ -36,34 +46,34 @@ repos:
       # failed commit into two.
       - id: dart-format
         name: dart format
-        entry: fvm dart format --output=none --set-exit-if-changed
+        entry: env -u GIT_DIR -u GIT_INDEX_FILE fvm dart format --output=none --set-exit-if-changed
         language: system
         types: [dart]
 
       - id: analyze
         name: analyze
-        entry: fvm dart analyze --fatal-infos
+        entry: env -u GIT_DIR -u GIT_INDEX_FILE fvm dart analyze --fatal-infos
         language: system
         types: [dart]
         pass_filenames: false
 
       - id: test
         name: test
-        entry: fvm dart test
+        entry: env -u GIT_DIR -u GIT_INDEX_FILE fvm dart test
         language: system
         files: \.(dart|cc|h|gn|json)$
         pass_filenames: false
 
       - id: example-analyze
         name: analyze · example
-        entry: bash -c 'cd example && fvm flutter analyze --fatal-infos'
+        entry: env -u GIT_DIR -u GIT_INDEX_FILE bash -c 'cd example && fvm flutter analyze --fatal-infos'
         language: system
         types: [dart]
         pass_filenames: false
 
       - id: example-test
         name: test · example
-        entry: bash -c 'cd example && fvm flutter test'
+        entry: env -u GIT_DIR -u GIT_INDEX_FILE bash -c 'cd example && fvm flutter test'
         language: system
         types: [dart]
         pass_filenames: false
@@ -73,7 +83,7 @@ repos:
       # Flutter and would make this fail for the wrong reason.
       - id: no-flutter
         name: no path to package:flutter
-        entry: bash -c '! (fvm dart pub deps --style=list | tail -n +3 | grep -qi flutter)'
+        entry: env -u GIT_DIR -u GIT_INDEX_FILE bash -c '! (fvm dart pub deps --style=list | tail -n +3 | grep -qi flutter)'
         language: system
         types: [yaml]
         pass_filenames: false

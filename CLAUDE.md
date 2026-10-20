@@ -7,11 +7,21 @@ a git submodule; it knows nothing about any app, any logger or any backend.
 ## Environment
 
 **`flutter` and `dart` are not on PATH.** The toolchain is pinned in `.fvmrc`
-to 3.41.9 and reached through FVM:
+and reached through FVM — `fvm dart …`, as the hooks run it, or the SDK on
+PATH for a session, which is what the bare `dart run` lines below assume:
 
 ```sh
-export PATH="$HOME/fvm/versions/3.41.9/bin:$PATH"
+export PATH="$HOME/fvm/versions/$(jq -r .flutter .fvmrc)/bin:$PATH"
 ```
+
+**The rest of the toolchain is `mise.toml`'s**: the Python `build_native.dart`
+runs Crashpad's scripts with, the JDK the example's Android build needs, and
+pre-commit. `mise install` puts them on a machine, and `mise run doctor`
+(`tool/doctor.sh`) checks everything this file names — clang, the curl and
+zlib headers, the native half in the cache, the NDK — and says how to fix what
+is missing. `native.yml` reads the Python minor and the JDK major from the same
+pins through `tool/mise_pin.sh`. None of these files reaches the published
+package: `.pubignore` names them.
 
 **The tests need the native half.** Before anything else, once per machine and
 again after touching `native/` or the lock:
@@ -645,4 +655,3 @@ would be sent" reads as though the path is sent. It never is:
   takes `BaseName()` when it copies one in, and that name is not sanitised,
   so an app should not name attachment files after the user.
 - **Paths inside the dump** are masked like everything else.
-
