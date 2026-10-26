@@ -191,11 +191,17 @@ jobs:
           lipo -archs "$handler"
           codesign --verify --strict --deep "$app"
 
+      # Read by `release` in this run and nothing else, so kept one day —
+      # enough to re-run failed jobs — rather than GitHub's ninety: Actions
+      # storage is billed in GB-hours across the whole organisation, and
+      # once a month's allowance is spent every upload everywhere fails.
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}
           path: dist/*.tar.gz
           if-no-files-found: error
+          retention-days: 1
+          retention-days: 1
 
   # Android and iOS, whose archives hold only libraries (see
   # lib/src/build/native_artifacts.dart). Android builds on Linux with the
