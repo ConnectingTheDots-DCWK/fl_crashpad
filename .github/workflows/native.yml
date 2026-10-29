@@ -201,7 +201,6 @@ jobs:
           path: dist/*.tar.gz
           if-no-files-found: error
           retention-days: 1
-          retention-days: 1
 
   # Android and iOS, whose archives hold only libraries (see
   # lib/src/build/native_artifacts.dart). Android builds on Linux with the
@@ -314,11 +313,13 @@ jobs:
           fi
           find "$app/Frameworks" -maxdepth 2 -name 'fl_crashpad_native*' | grep .
 
+      # Kept one day, like the desktop archives above.
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}
           path: dist/*.tar.gz
           if-no-files-found: error
+          retention-days: 1
 
   release:
     if: startsWith(github.ref, 'refs/tags/native-v')
